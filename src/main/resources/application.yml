@@ -1,0 +1,118 @@
+spring:
+  application:
+    name: store-service
+  
+  messages:
+    encoding: UTF-8
+    basename: i18n/messages
+    use-code-as-default-message: true
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/storedb
+    username: myuser
+    password: secret
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        jdbc:
+          batch_size: 100
+        order_inserts: true
+        order_updates: true
+  
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+  
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+  
+  docker:
+    compose:
+      enabled: true
+      file: compose.yaml
+  
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+  
+  cache:
+    type: redis
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+logging:
+  level:
+    com.jumbo.store: INFO
+    org.springframework.web: INFO
+    org.hibernate: WARN
+    org.springframework.cache: DEBUG
+
+# JWT Configuration
+jwt:
+  secret: mySecretKeyForJWTTokenGenerationThatShouldBeAtLeast256BitsLongForProductionUse
+  expiration: 86400000  # 24 hours in milliseconds
+
+# Swagger/OpenAPI Configuration
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    config-url: /v3/api-docs/swagger-config
+    urls:
+      - url: /v3/api-docs
+        name: Store Service API
+
+# Resilience4j Circuit Breaker Configuration
+resilience4j:
+  circuitbreaker:
+    instances:
+      storeService:
+        registerHealthIndicator: true
+        slidingWindowSize: 10
+        minimumNumberOfCalls: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        automaticTransitionFromOpenToHalfOpenEnabled: true
+        waitDurationInOpenState: 10s
+        failureRateThreshold: 50
+        slowCallRateThreshold: 100
+        slowCallDurationThreshold: 2s
+        recordExceptions:
+          - org.springframework.dao.DataAccessException
+          - java.sql.SQLException
+          - java.util.concurrent.TimeoutException
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,circuitbreakers,circuitbreakerevents
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  circuitbreakers:
+    endpoints:
+      circuitbreakers:
+        enabled: true
+      circuitbreakerevents:
+        enabled: true
+

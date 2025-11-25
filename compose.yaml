@@ -1,0 +1,63 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: store-service-postgres
+    environment:
+      POSTGRES_DB: storedb
+      POSTGRES_USER: myuser
+      POSTGRES_PASSWORD: secret
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U myuser -d storedb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - store-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: store-service-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - store-network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: store-service-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/storedb
+      SPRING_DATASOURCE_USERNAME: myuser
+      SPRING_DATASOURCE_PASSWORD: secret
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - store-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  store-network:
+    driver: bridge

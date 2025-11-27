@@ -1,5 +1,6 @@
 package com.jumbo.store.domain.model;
 
+import com.jumbo.store.web.dto.StoreDTO;
 import jakarta.persistence.*;
 import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
@@ -67,4 +68,31 @@ public class Store {
 
     @Column(length = 20)
     private String sapStoreID;
+
+    /**
+     * Converts this Store entity to StoreDTO with calculated distance.
+     *
+     * @param distance the calculated distance in kilometers from a reference point
+     * @return StoreDTO instance with all store fields plus distance
+     */
+    public StoreDTO toDTO(double distance) {
+        return new StoreDTO(
+                this.uuid,
+                this.addressName,
+                this.city,
+                this.postalCode,
+                this.street,
+                this.street2,
+                this.street3,
+                this.latitude,
+                this.longitude,
+                this.complexNumber,
+                this.showWarningMessage,
+                this.todayOpen,
+                this.todayClose,
+                this.locationType,
+                this.collectionPoint,
+                this.sapStoreID,
+                distance);
+    }
 }

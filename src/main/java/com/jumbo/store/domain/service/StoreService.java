@@ -2,6 +2,7 @@ package com.jumbo.store.domain.service;
 
 import com.jumbo.store.configuration.CacheConfig;
 import com.jumbo.store.configuration.CircuitBreakerConfig;
+import com.jumbo.store.domain.model.Coordinate;
 import com.jumbo.store.domain.model.Store;
 import com.jumbo.store.domain.repository.StoreRepository;
 import com.jumbo.store.validation.LocationValidator;
@@ -19,10 +20,6 @@ import org.springframework.cloud.client.circuitbreaker.CircuitBreakerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Service for store-related business logic.
- * Follows Single Responsibility Principle - coordinates store operations.
- */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -32,7 +29,6 @@ public class StoreService {
 
     private final StoreRepository storeRepository;
     private final DistanceCalculator distanceCalculator;
-    private final StoreMapper storeMapper;
     private final CircuitBreakerFactory<?, ?> circuitBreakerFactory;
     private final LocationValidator locationValidator;
 
@@ -42,7 +38,7 @@ public class StoreService {
      * Caches the store list to reduce database load.
      * Protected by circuit breaker to handle database failures gracefully.
      *
-     * @return List of all stores from database
+     * @return List of all stores, or empty list if database is unavailable
      */
     @Transactional(readOnly = true)
     @Cacheable(value = CacheConfig.STORES_CACHE, key = "'all-stores'")
@@ -61,26 +57,12 @@ public class StoreService {
             log.error(
                     "Circuit breaker opened - database unavailable. Returning empty list. Error: {}",
                     throwable.getMessage());
-            return getAllStoresFallback(throwable);
+            return List.of();
         });
     }
 
     /**
-     * Fallback method when database is unavailable.
-     * Returns empty list to allow the application to continue functioning.
-     *
-     * @param throwable the exception that triggered the fallback
-     * @return Empty list of stores
-     */
-    private List<Store> getAllStoresFallback(Throwable throwable) {
-        log.error("Circuit breaker fallback triggered - database unavailable. Error: {}", throwable.getMessage());
-        return List.of();
-    }
-
-    /**
      * Finds the nearest stores to a given location.
-     * Uses cached store list and calculates distances in memory.
-     * Handles circuit breaker fallback gracefully.
      *
      * @param latitude  the latitude of the location
      * @param longitude the longitude of the location
@@ -92,7 +74,7 @@ public class StoreService {
         log.debug("Finding nearest stores to location: lat={}, lon={}, limit={}", latitude, longitude, limit);
 
         locationValidator.validate(latitude, longitude);
-
+        Coordinate coordinate = new Coordinate(latitude, longitude);
         int storeLimit = determineLimit(limit);
         List<Store> allStores = getAllStores();
 
@@ -101,7 +83,7 @@ public class StoreService {
             return createEmptyResponse();
         }
 
-        List<StoreDTO> nearestStores = calculateNearestStores(allStores, latitude, longitude, storeLimit);
+        List<StoreDTO> nearestStores = calculateNearestStores(allStores, coordinate, storeLimit);
         log.info("Found {} nearest stores", nearestStores.size());
 
         return new NearestStoresResponse(nearestStores, nearestStores.size());
@@ -115,31 +97,20 @@ public class StoreService {
         return new NearestStoresResponse(List.of(), 0);
     }
 
-    /**
-     * Calculates distances for all stores and returns the nearest ones sorted by distance (closest first).
-     * Stores are sorted in ascending order by distance, so the closest store is first, second closest is second, etc.
-     *
-     * @param stores    list of all stores
-     * @param latitude  latitude of the target location
-     * @param longitude longitude of the target location
-     * @param limit     maximum number of stores to return
-     * @return list of nearest stores sorted by distance (ascending - closest first)
-     */
-    private List<StoreDTO> calculateNearestStores(
-            List<Store> stores, BigDecimal latitude, BigDecimal longitude, int limit) {
+    private List<StoreDTO> calculateNearestStores(List<Store> stores, Coordinate coordinate, int limit) {
         return stores.stream()
-                .map(store -> calculateStoreWithDistance(store, latitude, longitude))
+                .map(store -> calculateStoreWithDistance(store, coordinate))
                 .sorted(Comparator.comparing(StoreDTO::distanceInKm, Comparator.nullsLast(Double::compareTo)))
                 .limit(limit)
                 .toList();
     }
 
-    private StoreDTO calculateStoreWithDistance(Store store, BigDecimal latitude, BigDecimal longitude) {
+    private StoreDTO calculateStoreWithDistance(Store store, Coordinate coordinate) {
         double distance = distanceCalculator.calculateDistance(
-                latitude.doubleValue(),
-                longitude.doubleValue(),
+                coordinate.latitudeAsDouble(),
+                coordinate.longitudeAsDouble(),
                 store.getLatitude().doubleValue(),
                 store.getLongitude().doubleValue());
-        return storeMapper.toDTO(store, distance);
+        return store.toDTO(distance);
     }
 }

@@ -6,7 +6,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * Validates location coordinates (latitude and longitude).
- * Follows Single Responsibility Principle - only responsible for location validation.
  */
 @Component
 @Slf4j

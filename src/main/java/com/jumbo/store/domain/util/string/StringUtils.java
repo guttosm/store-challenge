@@ -4,6 +4,13 @@ public class StringUtils {
 
     private StringUtils() {}
 
+    /**
+     * Removes surrounding quotes from error messages.
+     * Handles cases where error messages are wrapped in quotes like "error message".
+     *
+     * @param value the error message to clean
+     * @return cleaned message without surrounding quotes, or null if input is null
+     */
     public static String cleanupErrorMessage(String value) {
         if (value == null) {
             return null;
@@ -17,9 +24,5 @@ public class StringUtils {
             cleaned = cleaned.substring(0, cleaned.length() - 1);
         }
         return cleaned;
-    }
-
-    public static boolean isNullOrBlank(String str) {
-        return str == null || str.isBlank();
     }
 }

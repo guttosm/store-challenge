@@ -34,6 +34,12 @@ public class JwtTokenProvider {
 
     /**
      * Generates a JWT token for a user with roles and permissions.
+     * Token expiration is configured via jwt.expiration property (default: 24 hours).
+     *
+     * @param username    the username to include in the token
+     * @param roles       list of role authorities (e.g., "ROLE_CUSTOMER")
+     * @param permissions list of permission strings (e.g., "read:store")
+     * @return signed JWT token string
      */
     public String generateToken(String username, List<String> roles, List<String> permissions) {
         Date now = new Date();
@@ -54,7 +60,10 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Validates a JWT token.
+     * Validates a JWT token signature and expiration.
+     *
+     * @param token the JWT token to validate
+     * @return true if token is valid, false otherwise
      */
     public boolean validateToken(String token) {
         try {
@@ -79,7 +88,11 @@ public class JwtTokenProvider {
     }
 
     /**
-     * Extracts authorities (roles + permissions) from JWT token.
+     * Extracts authorities from JWT token.
+     * Permissions are prefixed with "SCOPE_" to match Spring Security's scope format.
+     *
+     * @param token the JWT token
+     * @return list of authorities (roles + scoped permissions)
      */
     public List<SimpleGrantedAuthority> getAuthoritiesFromToken(String token) {
         Claims claims = Jwts.parser()

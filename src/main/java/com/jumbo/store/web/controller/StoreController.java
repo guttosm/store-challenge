@@ -13,8 +13,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * REST controller for store-related operations.
- * Follows Single Responsibility Principle - only handles HTTP requests/responses.
- * Requires authentication with customer role and read:store permission.
  */
 @RestController
 @RequestMapping("/stores")

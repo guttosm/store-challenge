@@ -7,7 +7,6 @@ import org.springframework.stereotype.Component;
 
 /**
  * Calculates distances between geographic coordinates using the Haversine formula.
- * Follows Single Responsibility Principle - only responsible for distance calculations.
  */
 @Component
 @Slf4j
